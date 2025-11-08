@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>NeuraSkin Bot</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: url('images/Bg2.jpg') no-repeat center center fixed;
+      background-size: cover;
+      color: #f0f0f0;
+    }
+
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      background-color: rgba(30, 30, 30, 0.9);
+      padding: 15px 20px;
+      border-bottom: 2px solid #444;
+    }
+
+    .header h1 {
+      font-size: 30px;
+      text-align: center;
+      color: #ffffff;
+      margin: 0;
+    }
+
+    .header nav {
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header nav a {
+      margin-right: 15px;
+      text-decoration: none;
+      color: #ddd;
+      font-weight: 500;
+      font-size: 18px;
+    }
+
+    .header nav a:hover {
+      color: #fff;
+    }
+
+    .top-right-button {
+      padding: 6px 14px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .top-right-button:hover {
+      background-color: #218838;
+    }
+
+    .chat-container {
+      position: absolute;
+      top: 92px; /* Height of header */
+      bottom: 100px; /* Height of input area */
+      left: 0;
+      right: 0;
+      padding: 10px;
+      overflow-y: auto;
+      background-color: rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #chatWindow {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      background-color: rgba(20, 20, 20, 0.8);
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .message {
+      padding: 10px;
+      border-radius: 10px;
+      max-width: 70%;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      color: #fff;
+    }
+
+    .user-message {
+      background-color: #1e3a8a;
+      align-self: flex-end;
+    }
+
+    .bot-message {
+      background-color: #374151;
+      align-self: flex-start;
+    }
+
+    .message img {
+      max-width: 200px;
+      height: auto;
+      margin-top: 8px;
+      border-radius: 8px;
+    }
+
+    .input-area {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 10px;
+      background-color: rgba(30, 30, 30, 0.95);
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      border-top: 2px solid #444;
+    }
+
+    #userInput {
+      flex: 1 1 auto;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #666;
+      min-width: 200px;
+      height: 60px;
+      resize: vertical;
+      font-size: 16px;
+      background-color: #111;
+      color: #f0f0f0;
+    }
+
+    .file-upload-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #imageInput {
+      display: none;
+    }
+
+    .custom-file-label {
+      background-color: #444;
+      color: #ddd;
+      padding: 12px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .custom-file-label:hover {
+      background-color: #666;
+    }
+
+    #fileName {
+      color: #ccc;
+      font-size: 16px;
+      max-width: 250px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    button {
+      padding: 14px 12px;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    button:hover {
+      background: #004999;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>NeuraSkin Bot</h1>
+    <nav>
+      <div>
+        <a href="index.html" target="_blank">Home</a>
+        <a href="https://cfi.iitm.ac.in/clubs/team-sahaay" target="_blank">About Sahaay</a>
+      </div>
+      <button class="top-right-button" onclick="notifyBackend()">New Thread</button>
+    </nav>
+  </div>
+
+  <div class="chat-container">
+    <div id="chatWindow"></div>
+  </div>
+
+  <div class="input-area">
+    <textarea id="userInput" placeholder="Type your message..."></textarea>
+
+    <div class="file-upload-wrapper">
+      <label for="imageInput" class="custom-file-label">📎 Choose Image</label>
+      <input type="file" id="imageInput" accept="image/*" onchange="updateFileName()">
+      <span id="fileName">No file chosen</span>
+    </div>
+
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    function appendMessage(sender, text, imageURL = null) {
+      const chatWindow = document.getElementById("chatWindow");
+      const msg = document.createElement("div");
+      msg.classList.add("message", sender === "user" ? "user-message" : "bot-message");
+
+      if (text) {
+        const textNode = document.createElement("div");
+        textNode.textContent = text;
+        msg.appendChild(textNode);
+      }
+
+      if (imageURL) {
+        const img = document.createElement("img");
+        img.src = imageURL;
+        img.alt = "Uploaded Image";
+        msg.appendChild(img);
+      }
+
+      chatWindow.appendChild(msg);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function updateFileName() {
+      const fileInput = document.getElementById("imageInput");
+      const fileNameSpan = document.getElementById("fileName");
+      const file = fileInput.files[0];
+      fileNameSpan.textContent = file ? file.name : "No file chosen";
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("userInput");
+      const fileInput = document.getElementById("imageInput");
+      const message = input.value.trim();
+      const file = fileInput.files[0];
+
+      if (!message && !file) return;
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          appendMessage("user", message || null, e.target.result);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        appendMessage("user", message);
+      }
+
+      input.value = "";
+      fileInput.value = "";
+      document.getElementById("fileName").textContent = "No file chosen";
+
+      const formData = new FormData();
+      formData.append("message", message);
+      if (file) {
+        formData.append("image", file);
+      }
+
+      fetch("https://arena-lisa-expertise-ferry.trycloudflare.com/chat", {
+        method: "POST",
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        appendMessage("bot", data.response);
+      })
+      .catch(err => {
+        appendMessage("bot", "⚠️ Error connecting to backend.");
+        console.error(err);
+      });
+    }
+
+    function notifyBackend() {
+        // Clear the chat window
+  	const chatWindow = document.getElementById("chatWindow");
+  	chatWindow.innerHTML = "";
+
+  	// Notify backend
+  	fetch('https://arena-lisa-expertise-ferry.trycloudflare.com/run-backend-func', {
+    		method: 'POST'
+  		})
+  	.then(response => response.text())
+  	.then(data => console.log("Backend response:", data))
+  	.catch(error => console.error('Error:', error));
+    }
+
+
+    document.getElementById("userInput").addEventListener("keydown", function(event) {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+  </script>
+
+</body>
+</html>
